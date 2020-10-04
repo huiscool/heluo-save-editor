@@ -59,10 +59,15 @@ func read() {
 	if err != nil {
 		panic(err)
 	}
-	playerFile, err := os.OpenFile("player.json", os.O_CREATE|os.O_RDWR, 0755)
+	playerFile, err := os.OpenFile("player.json", os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0755)
 	if err != nil {
 		panic(err)
 	}
+	playerFile.Truncate(0)
+	if err != nil {
+		panic(err)
+	}
+
 	reader := bufio.NewReader(srcFile)
 	var line []byte
 	cnt := 7
@@ -150,14 +155,14 @@ func write() {
 func AddItems(player Object, itemnames []string) {
 	oriItems := player.List("Inventory")
 	for _, name := range itemnames {
-		oriItems = append(oriItems, NewDefaultItem(name))
+		oriItems = append(oriItems, NewDefaultItem(name, 1, 0))
 	}
 	player.SetList("Inventory", oriItems)
 }
 
-func NewDefaultItem(itemid string) Object {
+func NewDefaultItem(itemid string, count int, level int) Object {
 	return (Object)(map[string]interface{}{
-		"Count":           1,
+		"Count":           count,
 		"Durability":      0,
 		"EffectId":        []string{},
 		"ForgeMaterials":  struct{}{},
@@ -166,7 +171,7 @@ func NewDefaultItem(itemid string) Object {
 		"Id":              nil,
 		"IsNew":           false,
 		"ItemId":          itemid,
-		"Level":           0,
+		"Level":           level,
 		"MaxDurability":   0,
 		"QualityTitle":    "",
 		"QuenchEffect":    []string{},
