@@ -39,6 +39,10 @@ var (
 	Skills   *string
 )
 
+var (
+	save Object
+)
+
 func main() {
 	Write = flag.Bool("write", false, "")
 	SavePath = flag.String("path", "save/Fast001.save", "save/Fast001.save")
@@ -54,16 +58,34 @@ func main() {
 
 }
 
+func readIntoJson(filename string, objpath string) {
+	jsonFile, err := os.OpenFile("player.json", os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0755)
+	if err != nil {
+		panic(err)
+	}
+	jsonFile.Truncate(0)
+	if err != nil {
+		panic(err)
+	}
+
+	fields := strings.Split(objpath, "/")
+	out := save
+	for _, field := range fields {
+		out = out.Field(field)
+	}
+
+	encode := json.NewEncoder(jsonFile)
+	encode.SetIndent("", "  ")
+	err = encode.Encode(out)
+	if err != nil {
+		panic(err)
+	}
+
+	jsonFile.Close()
+}
+
 func read() {
 	srcFile, err := os.Open(*SavePath)
-	if err != nil {
-		panic(err)
-	}
-	playerFile, err := os.OpenFile("player.json", os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0755)
-	if err != nil {
-		panic(err)
-	}
-	playerFile.Truncate(0)
 	if err != nil {
 		panic(err)
 	}
@@ -76,33 +98,44 @@ func read() {
 		if err != io.EOF {
 			continue
 		}
-
 	}
-	var save Object
+
 	err = json.Unmarshal(line, &save)
 	if err != nil {
 		panic(err)
 	}
-	player := save.Field("Character").Field("Player")
 
-	encode := json.NewEncoder(playerFile)
-	encode.SetIndent("", "  ")
-	err = encode.Encode(player)
-	if err != nil {
-		panic(err)
-	}
-
-	playerFile.Close()
+	readIntoJson("player.json", "Character/Player")
+	readIntoJson("nicknames.json", "AvailableNicknames")
+	readIntoJson("areafriendly.json", "AreaFriendly")
 	srcFile.Close()
 
 }
 
-func write() {
-	srcFile, err := os.Open(*SavePath)
+func writeJson(filename string, objpath string) {
+	file, err := os.OpenFile("player.json", os.O_RDONLY, 0755)
 	if err != nil {
 		panic(err)
 	}
-	playerFile, err := os.OpenFile("player.json", os.O_RDONLY, 0755)
+	var obj Object
+	playerDecoder := json.NewDecoder(file)
+	err = playerDecoder.Decode(&obj)
+	if err != nil {
+		panic(err)
+	}
+
+	fields := strings.Split(objpath, "/")
+	out := save
+	for _, field := range fields[:len(fields)-1] {
+		out = out.Field(field)
+	}
+	lastField := fields[len(fields)-1]
+	out.SetField(lastField, obj)
+	file.Close()
+}
+
+func write() {
+	srcFile, err := os.Open(*SavePath)
 	if err != nil {
 		panic(err)
 	}
@@ -121,24 +154,15 @@ func write() {
 		}
 	}
 	// 最后一行解析一下，然后改掉
-	var save Object
 	err = json.Unmarshal(line, &save)
 	if err != nil {
 		panic(err)
 	}
-	var player Object
-	playerDecoder := json.NewDecoder(playerFile)
-	err = playerDecoder.Decode(&player)
-	if err != nil {
-		panic(err)
-	}
-	// 修改 player
-	itemnames := strings.Split(*Items, ",")
-	skillnames := strings.Split(*Skills, ",")
-	AddItems(player, itemnames)
-	AddSkill(player, skillnames)
 
-	save.Field("Character").SetField("Player", player)
+	writeJson("player.json", "Character/Player")
+	writeJson("nicknames.json", "AvailableNicknames")
+	writeJson("areafriendly.json", "AreaFriendly")
+
 	savebin, err := json.Marshal(save)
 	if err != nil {
 		panic(err)
@@ -148,7 +172,7 @@ func write() {
 		panic(err)
 	}
 	srcFile.Close()
-	playerFile.Close()
+
 	dstFile.Close()
 }
 
