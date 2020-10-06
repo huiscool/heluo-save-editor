@@ -1,5 +1,5 @@
 .vscode/
 save/
-player.json
+*.json
 heluo-save-editor
 *.save
