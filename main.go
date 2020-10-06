@@ -43,11 +43,12 @@ func main() {
 
 }
 
-func readIntoJson(filename string, objpath string) {
-	jsonFile, err := os.OpenFile("player.json", os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0755)
+func read() {
+	srcFile, err := os.Open(*SavePath)
 	if err != nil {
 		panic(err)
 	}
+
 	objFile, err := os.OpenFile("obj.json", os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0755)
 	if err != nil {
 		panic(err)
@@ -71,17 +72,14 @@ func readIntoJson(filename string, objpath string) {
 	if err != nil {
 		panic(err)
 	}
-	encode := json.NewEncoder(objFile)
-	encode.SetIndent("", "  ")
-	err = encode.Encode(save)
-
+	enc := json.NewEncoder(objFile)
+	enc.SetIndent("", "  ")
+	err = enc.Encode(save)
 	if err != nil {
 		panic(err)
 	}
-
 	objFile.Close()
 	srcFile.Close()
-
 }
 
 func write() {
